@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Global Gumshoe: Track the Rogue Trader</title>
+<style>
+:root{--bg:#0b1a2f;--card:#12263f;--card2:#1b3556;--ink:#fff8e8;--mut:#c9d6e8;--gold:#f2c14e;--teal:#5ee0d0;--red:#ff8d7a;--green:#7bf0a8;--line:#3d6296}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.55 system-ui,"Segoe UI",Arial,sans-serif}
+#app{max-width:1040px;margin:0 auto;padding:12px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+h1{font:800 24px ui-monospace,Consolas,monospace;color:var(--gold);margin:0;letter-spacing:2px;text-shadow:2px 2px 0 #000}
+h2{font:700 22px Georgia,"Times New Roman",serif;margin:0 0 8px;color:var(--gold)}
+h2 .role{font:500 15px system-ui,sans-serif;color:var(--mut);margin-left:10px}
+h2.ok{color:var(--green)}h2.no{color:var(--red)}h3{margin:6px 0;font:700 16px system-ui;color:var(--teal);letter-spacing:.5px}
+#ctrl{display:flex;gap:6px;flex-wrap:wrap}
+.btn{font:700 17px system-ui,sans-serif;min-height:44px;padding:8px 16px;border-radius:8px;border:3px solid var(--line);background:var(--card2);color:var(--ink);cursor:pointer;transition:transform .08s}
+.btn:hover{transform:translateY(-2px);border-color:var(--gold)}.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--gold);color:#241800;border-color:#fff2b0}
+.btn.alt{background:#173a5a;border-color:#5aa0d8}
+.btn.ghost{background:transparent;font-size:15px;min-height:36px}
+.btn.sm{min-height:36px;padding:4px 12px;font-size:15px}
+.btn[aria-pressed="true"]{background:#1f5a44;border-color:var(--green)}
+.btn[aria-pressed="true"]::before{content:"\2713  "}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.gone{text-decoration:line-through;opacity:.55}
+:focus-visible{outline:4px solid #fff;outline-offset:3px}
+#hud{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
+.stat{background:var(--card);border:3px solid var(--line);border-radius:8px;padding:6px 12px;font:700 17px ui-monospace,Consolas,monospace;min-width:0}
+.stat small{display:block;font:600 12px system-ui;color:var(--mut);letter-spacing:.6px}
+.stat span{overflow-wrap:anywhere}
+.stat.pop{animation:pop .5s}
+.bar{height:8px;background:#000;border-radius:4px;margin-top:3px;overflow:hidden}.bar i{display:block;height:100%;background:var(--gold);transition:width .6s}
+.bar.low i{background:var(--red)}
+.views{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+canvas.px{width:100%;aspect-ratio:8/3;image-rendering:pixelated;border:4px solid var(--line);border-radius:8px;display:block;background:#000}
+#passport{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;min-height:30px;align-items:center}
+#passport .stamp{border:2px dashed var(--gold);color:var(--gold);padding:1px 10px;border-radius:6px;font:700 13px ui-monospace,monospace;transform:rotate(-2deg);animation:pop .4s}
+#passport .stamp.x{border-color:var(--red);color:var(--red);transform:rotate(2deg)}
+#passport small{color:var(--mut);font-weight:700}
+#notebook{background:var(--card);border:3px solid var(--line);border-radius:8px;padding:8px 14px;margin:8px 0}
+#notebook .cols{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+#notebook ul{margin:2px 0;padding-left:20px}#notebook li{margin:2px 0;font-size:16px}
+.na{color:var(--mut);font-style:italic}
+#panel{background:var(--card);border:4px solid var(--line);border-radius:8px;padding:18px 22px;min-height:260px}
+#panel h2:focus{outline:none}
+.say{font-size:20px;margin:6px 0 14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-end;margin-top:12px}
+.row.l{justify-content:flex-start}
+.asks{display:flex;flex-wrap:wrap;gap:8px;margin-right:auto;align-items:center}.asks .lbl{color:var(--mut);font-size:15px}
+.opts{display:grid;gap:10px}.opt{text-align:left}
+.card{background:var(--card2);border:3px solid #35577f;border-radius:8px;padding:10px 14px;margin:8px 0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.grid5{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.big{font:800 24px ui-monospace,Consolas,monospace;color:var(--gold)}
+.tag{display:inline-block;padding:1px 8px;border:2px solid var(--line);border-radius:6px;font-size:14px;margin-left:6px;color:var(--mut)}
+.tipline{color:var(--mut);font-size:15px}
+.sus{text-align:center}.sus canvas{width:96px;height:120px;image-rendering:pixelated;background:#0d1d33;border:2px solid var(--line);border-radius:6px}
+.sus ul{text-align:left;font-size:14px;list-style:none;padding:0;margin:4px 0}
+.match{color:var(--green)}.miss{color:var(--red);text-decoration:line-through}
+table{border-collapse:collapse;width:100%;margin:6px 0;font-size:16px}th,td{border:2px solid #35577f;padding:5px 9px;text-align:left}th{background:#173050}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.dlgrow{display:flex;gap:14px;align-items:flex-start}.port{width:64px;height:68px;image-rendering:pixelated;background:#0d1d33;border:2px solid var(--line);border-radius:6px;flex:none}#me{width:48px;height:51px;image-rendering:pixelated;background:#0d1d33;border:2px solid var(--line);border-radius:6px}.creator{display:grid;grid-template-columns:150px 1fr;gap:16px}.creator canvas{width:136px;height:146px;image-rendering:pixelated;background:#0d1d33;border:3px solid var(--line);border-radius:8px}.grp{margin:4px 0}.grp b{display:block;font-size:14px;color:var(--teal);letter-spacing:.5px}.grp .row{margin-top:2px}
+@keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+.stampbig{display:inline-block;border:6px solid var(--green);color:var(--green);font:900 34px ui-monospace,monospace;padding:2px 18px;transform:rotate(-6deg);animation:pop .6s;letter-spacing:4px}
+body.noanim *{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:760px){.creator{grid-template-columns:1fr}body{font-size:16px}#hud{grid-template-columns:1fr 1fr}.views{grid-template-columns:1fr}#notebook .cols{grid-template-columns:1fr}}
+@media print{#ctrl,.views,#hud,.noprint{display:none!important}body{background:#fff;color:#000}#panel,#notebook{border:1px solid #000;background:#fff;color:#000}}
+</style>
+</head>
+<body>
+<div id="app">
+ <header>
+  <div style="display:flex;align-items:center;gap:12px"><canvas id="me" width="56" height="60" role="img" aria-label="Your agent avatar" hidden></canvas><div><h1>GLOBAL GUMSHOE</h1><div id="meName" class="tipline"></div></div></div>
+  <div id="ctrl" role="group" aria-label="Game settings">
+   <button class="btn sm" id="bVoice" type="button" aria-pressed="true">Voice</button>
+   <button class="btn sm" id="bSfx" type="button" aria-pressed="true">Sound effects</button>
+   <button class="btn sm" id="bAnim" type="button" aria-pressed="true">Animation</button>
+  </div>
+ </header>
+ <div id="hud" role="group" aria-label="Case status">
+  <div class="stat" id="sHours"><small>HOURS LEFT</small><span>--</span><div class="bar"><i style="width:100%"></i></div></div>
+  <div class="stat" id="sFunds"><small>BUREAU FUNDS</small><span>--</span></div>
+  <div class="stat" id="sLoc"><small>LOCATION</small><span>Bureau HQ</span></div>
+  <div class="stat" id="sStop"><small>CASE PROGRESS</small><span>--</span></div>
+ </div>
+ <div class="views">
+  <canvas id="map" class="px" width="360" height="135" role="img" aria-label="World map"></canvas>
+  <canvas id="city" class="px" width="320" height="120" role="img" aria-label="City scene"></canvas>
+ </div>
+ <div id="passport" aria-label="Passport stamps"></div>
+ <section id="notebook" aria-label="Case notebook"></section>
+ <main id="panel"></main>
+ <div id="sr" class="sr-only" aria-live="assertive"></div>
+</div>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
+const S={voice:true,sfx:true,anim:!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)};
+
+/* ---------- world data ---------- */
+// id, name, city, lon, lat, currency, companies, exports, landmark, shape, trade fact, UTC offset
+const C=[
+['jp','Japan','Tokyo',139.7,35.7,'Japanese yen',['Toyota','Sony','Honda'],['automobiles','electronics','industrial robots'],'Mount Fuji','mountain','is an island nation that imports most of its oil and gas',9],
+['kr','South Korea','Seoul',127,37.5,'South Korean won',['Samsung','Hyundai','LG'],['semiconductors','smartphones','ships'],'Gyeongbokgung Palace','gate','has computer chips as its top export',9],
+['cn','China','Shanghai',121.5,31.2,'Chinese yuan',['Huawei','Alibaba','BYD'],['electronics','machinery','textiles'],'the Great Wall','gate','is among the world\'s largest exporters of manufactured goods',8],
+['in','India','Mumbai',72.9,19.1,'Indian rupees',['Tata Group','Infosys','Reliance'],['software services','generic medicines','jewelry'],'the Gateway of India','gate','is a major exporter of software services and generic medicines',5.5],
+['sg','Singapore','Singapore',103.8,1.35,'Singapore dollars',['Grab','Singapore Airlines','Sea Limited'],['electronics','refined petroleum','pharmaceuticals'],'Marina Bay Sands','spire','is a tiny city-state with one of the world\'s busiest container ports',8],
+['ae','United Arab Emirates','Dubai',55.3,25.2,'UAE dirhams',['Emirates airline','DP World','Emaar'],['oil','aluminum','re-exported goods'],'the Burj Khalifa','spire','is a Gulf trade hub whose Jebel Ali port is the largest in the Middle East',4],
+['sa','Saudi Arabia','Riyadh',46.7,24.7,'Saudi riyals',['Saudi Aramco','SABIC','STC'],['crude oil','petrochemicals','plastics'],'the Kingdom Centre tower','spire','is one of the world\'s largest oil exporters',3],
+['de','Germany','Berlin',13.4,52.5,'euros',['Volkswagen','Siemens','Adidas'],['automobiles','machinery','chemicals'],'the Brandenburg Gate','gate','is Europe\'s largest economy and a leading exporter of cars and machinery',1],
+['fr','France','Paris',2.35,48.85,'euros',['Airbus','LVMH','L\'Oreal'],['aircraft','luxury goods','wine'],'the Eiffel Tower','tower','is a leading exporter of aircraft, luxury goods, and wine',1],
+['ch','Switzerland','Zurich',8.54,47.37,'Swiss francs',['Nestle','Rolex','Novartis'],['watches','chocolate','pharmaceuticals'],'the Matterhorn','mountain','is a landlocked country famous for watches, chocolate, and medicines',1],
+['se','Sweden','Stockholm',18.07,59.33,'Swedish kronor',['IKEA','Spotify','Volvo'],['vehicles','machinery','timber'],'the Gamla Stan old town','dome','is home to a flat-pack furniture giant that began in a small town',1],
+['dk','Denmark','Copenhagen',12.57,55.68,'Danish kroner',['LEGO','Maersk','Novo Nordisk'],['pharmaceuticals','wind turbines','container shipping'],'the Little Mermaid statue','statue','is home to a leading global container shipping company',1],
+['fi','Finland','Helsinki',24.94,60.17,'euros',['Nokia','Kone','Supercell'],['paper','machinery','telecom equipment'],'Helsinki Cathedral','dome','is a Nordic country that once led the world in mobile phones',2],
+['es','Spain','Barcelona',2.17,41.38,'euros',['Inditex','Santander','Telefonica'],['olive oil','fashion','automobiles'],'the Sagrada Familia','spire','is the world\'s largest producer of olive oil',1],
+['it','Italy','Milan',9.19,45.46,'euros',['Ferrari','Prada','Fiat'],['fashion','sports cars','machinery'],'Milan Cathedral','dome','is a hub of luxury fashion and sports-car makers',1],
+['nl','Netherlands','Amsterdam',4.9,52.37,'euros',['Heineken','Philips','ASML'],['flowers','machinery','chemicals'],'the Amsterdam canals','dome','is home to Europe\'s largest port, Rotterdam',1],
+['gb','United Kingdom','London',-0.13,51.5,'pounds sterling',['HSBC','Unilever','Rolls-Royce'],['financial services','pharmaceuticals','aerospace parts'],'Big Ben','tower','is home to the City of London financial district',0],
+['us','United States','New York',-74,40.7,'U.S. dollars',['Apple','Walmart','Boeing'],['aircraft','software','medical devices'],'the Statue of Liberty','statue','is the world\'s largest economy by total output',-5],
+['ca','Canada','Toronto',-79.4,43.7,'Canadian dollars',['Shopify','Bombardier','Royal Bank of Canada'],['crude oil','lumber','automobiles'],'the CN Tower','tower','shares the world\'s longest land border with its biggest trading partner',-5],
+['mx','Mexico','Mexico City',-99.1,19.4,'Mexican pesos',['America Movil','Cemex','Grupo Bimbo'],['automobiles','electronics','avocados'],'the pyramids of Teotihuacan','pyramid','is a leading exporter of avocados and vehicles',-6],
+['br','Brazil','Rio de Janeiro',-43.2,-22.9,'Brazilian reais',['Petrobras','Embraer','Vale'],['coffee','soybeans','iron ore'],'Christ the Redeemer','statue','is the world\'s largest coffee producer',-3],
+['ar','Argentina','Buenos Aires',-58.4,-34.6,'Argentine pesos',['Mercado Libre','YPF','Techint'],['beef','soybean products','wine'],'the Obelisk of Buenos Aires','tower','is famous for beef and Malbec wine',-3],
+['cl','Chile','Santiago',-70.7,-33.4,'Chilean pesos',['Codelco','LATAM Airlines','Falabella'],['copper','salmon','lithium'],'the Andes Mountains','mountain','is the world\'s largest producer of copper',-4],
+['co','Colombia','Bogota',-74.07,4.7,'Colombian pesos',['Avianca','Bancolombia','Ecopetrol'],['coffee','crude oil','cut flowers'],'Monserrate hill','mountain','is a major exporter of coffee and cut flowers',-5],
+['au','Australia','Sydney',151.2,-33.9,'Australian dollars',['BHP','Atlassian','Qantas'],['iron ore','coal','liquefied natural gas'],'the Sydney Opera House','sails','is the world\'s top exporter of iron ore',10],
+['za','South Africa','Cape Town',18.4,-33.9,'South African rand',['Naspers','Shoprite','MTN'],['platinum','gold','diamonds'],'Table Mountain','mountain','is the world\'s largest producer of platinum',2],
+['eg','Egypt','Cairo',31.2,30,'Egyptian pounds',['Commercial International Bank','Elsewedy Electric','Telecom Egypt'],['natural gas','cotton','textiles'],'the Great Pyramid of Giza','pyramid','runs the Suez Canal, a shortcut between Europe and Asia',2],
+['ke','Kenya','Nairobi',36.8,-1.3,'Kenyan shillings',['Safaricom','Equity Bank','Kenya Airways'],['black tea','cut flowers','coffee'],'Nairobi National Park','dome','is a leading exporter of black tea and cut flowers',3],
+['ng','Nigeria','Lagos',3.4,6.5,'Nigerian naira',['Dangote Group','Access Bank','MTN Nigeria'],['crude oil','cocoa','petroleum products'],'the Third Mainland Bridge','gate','is a major African oil producer',1],
+['vn','Vietnam','Ho Chi Minh City',106.7,10.8,'Vietnamese dong',['VinFast','Vinamilk','FPT'],['electronics','apparel','coffee'],'Independence Palace','gate','is a leading exporter of coffee and electronics',7],
+['id','Indonesia','Jakarta',106.8,-6.2,'Indonesian rupiah',['Gojek','Astra International','Indofood'],['palm oil','coal','nickel'],'the National Monument (Monas)','tower','is the world\'s largest producer of palm oil',7],
+['no','Norway','Oslo',10.75,59.9,'Norwegian kroner',['Equinor','Telenor','Yara'],['oil and gas','salmon','fertilizer'],'the Oslo Opera House','sails','is a Nordic country rich in offshore oil and gas that also exports salmon',1],
+['th','Thailand','Bangkok',100.5,13.75,'Thai baht',['PTT','CP Group','Thai Airways'],['rice','automobiles','electronics'],'Wat Arun','spire','is a major rice exporter and car-assembly hub',7]
+].map(a=>({id:a[0],n:a[1],city:a[2],lo:a[3],la:a[4],cur:a[5],co:a[6],ex:a[7],lm:a[8],shape:a[9],fact:a[10],tz:a[11]}));
+const BY={};C.forEach(c=>BY[c.id]=c);
+const tzTxt=t=>'UTC'+(t>=0?'+':'-')+Math.floor(Math.abs(t))+(Math.abs(t)%1?':30':'');
+function dist(a,b){const R=6371,r=x=>x*Math.PI/180,dl=r(b.la-a.la),dn=r(b.lo-a.lo),h=Math.sin(dl/2)**2+Math.cos(r(a.la))*Math.cos(r(b.la))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+const flightHrs=(a,b)=>Math.max(3,Math.round(dist(a,b)/900+2));
+const flightCost=(a,b)=>Math.round((dist(a,b)*.07+150)/10)*10;
+
+/* ---------- clue types ---------- */
+const TYPES={
+ co:{loc:'hq',text:v=>'asked for directions to the headquarters of '+v,test:(c,v)=>c.co.includes(v),vals:c=>c.co,learn:(c,v)=>v+' is headquartered in '+c.n},
+ fact:{loc:'hq',text:v=>'muttered that one country '+v,test:(c,v)=>c.fact===v,vals:c=>[c.fact],learn:(c,v)=>c.n+' '+v},
+ ex:{loc:'port',text:v=>'booked cargo space to ship '+v,test:(c,v)=>c.ex.includes(v),vals:c=>c.ex,learn:(c,v)=>c.n+' is known for exporting '+v},
+ cur:{loc:'mkt',text:v=>'exchanged a thick stack of cash for '+v,test:(c,v)=>c.cur===v,vals:c=>[c.cur],learn:(c,v)=>c.n+' uses '+v},
+ lm:{loc:'mkt',text:v=>'asked the quickest way to see '+v,test:(c,v)=>c.lm===v,vals:c=>[c.lm],learn:(c,v)=>v+' is in '+c.n}};
+const LOCS={hq:{name:'Business district',who:'Office receptionist',sp:'in the lobby of a downtown office tower'},port:{name:'Harbor',who:'Customs officer',sp:'at the harbor customs desk'},mkt:{name:'Market',who:'Market vendor',sp:'at a busy street market'}};
+function makeClues(t,diff){const pickT=l=>diff==='rookie'?({hq:'co',port:'ex',mkt:'lm'})[l]:diff==='agent'?pick(l==='hq'?['co','fact']:l==='port'?['ex']:['cur','lm']):({hq:'fact',port:'ex',mkt:'cur'})[l];
+ const o={};['hq','port','mkt'].forEach(l=>{const ty=pickT(l),v=pick(TYPES[ty].vals(t));o[l]={type:ty,val:v,text:TYPES[ty].text(v)};});return o;}
+
+/* ---------- customs quiz ---------- */
+const QUIZ=[
+['A business in Japan sells cars to customers in Brazil. For the Japanese business, this is an:',['export','import','tariff','quota'],'Goods sold to another country are exports. The same goods are imports for the country that buys them.'],
+['A tax a government places on imported goods is called a:',['tariff','subsidy','dividend','franchise'],'A tariff raises the price of imports, which can protect local producers but also raises prices for buyers.'],
+['A company that operates in several countries, with its headquarters in one, is a:',['multinational corporation','sole proprietorship','cooperative','monopoly'],'Multinational corporations have operations in more than one country.'],
+['If one U.S. dollar buys 150 yen today and 140 yen next month, the dollar has:',['weakened against the yen','strengthened against the yen','stayed the same','become worthless'],'The dollar now buys fewer yen, so it has weakened against the yen.'],
+['Two companies from different countries create a new business and share costs, profits, and control. This is a:',['joint venture','hostile takeover','franchise','sole proprietorship'],'A joint venture is a shared business created by two or more partners.'],
+['A country that can make a good at a lower opportunity cost than others has a:',['comparative advantage','trade deficit','quota','floating exchange rate'],'Comparative advantage explains why countries specialize and trade.'],
+['A trade deficit means a country:',['imports more than it exports','exports more than it imports','has stopped trading','taxes all exports'],'A trade deficit occurs when imports exceed exports.'],
+['A limit on the quantity of a good that may be imported is a:',['quota','tariff','subsidy','dividend'],'A quota limits quantity, while a tariff adds a tax.'],
+['Moving part of a company\'s production to another country to cut costs is called:',['offshoring','franchising','downsizing','bartering'],'Offshoring relocates operations abroad, often to lower costs.'],
+['If a country\'s currency becomes stronger, its exports generally become:',['more expensive for foreign buyers','cheaper for foreign buyers','unchanged in price','free of tariffs'],'A stronger currency makes a country\'s goods cost more in other currencies.'],
+['A company licenses its brand and business system to local owners in other countries. This is:',['franchising','an embargo','bootstrapping','liquidation'],'Franchising lets local owners run a business under an established brand.'],
+['An agreement that lowers or removes tariffs between countries is a:',['free trade agreement','embargo','quota','monopoly'],'Free trade agreements reduce trade barriers among member countries.']
+].map(a=>({q:a[0],opts:a[1],ci:0,ex:a[2]}));
+
+/* ---------- suspects ---------- */
+const NAMES=['Madame Markup','Count Tariff','Dr. Deficit','Lady Liquidity','Baron Bottom-Line'];
+const ATTR={hat:{top:'a purple top hat',beret:'a green beret',bowler:'a gray bowler hat',cap:'a yellow cap'},acc:{case:'a leather briefcase',umbrella:'a striped umbrella',cane:'a silver cane',map:'a rolled-up map'},eye:{monocle:'a gold monocle',round:'round glasses',shades:'dark sunglasses',none:'no eyewear'},coat:{teal:'a teal coat',orange:'an orange coat',navy:'a navy coat',maroon:'a maroon coat'}};
+const TRAITORDER=['hat','acc','eye','coat'],TLABEL={hat:'Headwear',acc:'Carries',eye:'Eyewear',coat:'Coat'};
+const traitLine=(k,v)=>({hat:'was wearing ',acc:'was carrying ',eye:v==='none'?'was not wearing any glasses':'was wearing ',coat:'was dressed in '})[k]+(k==='eye'&&v==='none'?'':ATTR[k][v]);
+function makeSuspects(){for(let t=0;t<500;t++){const ss=NAMES.map(n=>({n,hat:pick(Object.keys(ATTR.hat)),acc:pick(Object.keys(ATTR.acc)),eye:pick(Object.keys(ATTR.eye)),coat:pick(Object.keys(ATTR.coat))}));
+  const keys=new Set(ss.map(s=>s.hat+s.acc+s.eye));if(keys.size===5)return ss;}
+ return NAMES.map((n,i)=>({n,hat:Object.keys(ATTR.hat)[i%4],acc:Object.keys(ATTR.acc)[(i+1)%4],eye:Object.keys(ATTR.eye)[(i+2)%4],coat:Object.keys(ATTR.coat)[i%4]}));}
+
+/* ---------- audio + voice ---------- */
+let AC;
+function beep(f,d,type,v,delay){if(!S.sfx)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+(delay||0);o.type=type||'square';o.frequency.value=f;o.connect(g);g.connect(AC.destination);g.gain.setValueAtTime(v||.04,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.start(t);o.stop(t+d);}catch(e){}}
+const sfx={click:()=>beep(520,.06),good:()=>{beep(660,.1);beep(880,.14,0,0,.1);beep(1175,.2,0,0,.22)},bad:()=>{beep(220,.22,'sawtooth');beep(150,.3,'sawtooth',.04,.18)},fly:()=>{for(let i=0;i<6;i++)beep(300+i*60,.12,'triangle',.03,i*.12)},stamp:()=>beep(140,.18,'square',.07),cuff:()=>{beep(800,.05);beep(1000,.05,0,0,.07);beep(1300,.1,0,0,.14)}};
+let voice=null;
+function pickVoice(){if(!('speechSynthesis' in window))return;const vs=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));for(const p of [/natural/i,/neural/i,/aria|jenny|davis|guy/i,/google us english/i,/samantha|ava|allison|serena|karen|zira/i]){const f=vs.find(v=>p.test(v.name));if(f){voice=f;return;}}voice=vs[0]||null;}
+if('speechSynthesis' in window){pickVoice();speechSynthesis.onvoiceschanged=pickVoice;}
+function speak(t,pitch){if(!S.voice||!('speechSynthesis' in window)||!t)return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);if(voice)u.voice=voice;u.rate=.96;u.pitch=pitch||1;speechSynthesis.speak(u);}catch(e){}}
+
+/* ---------- shared graphics state ---------- */
+let G=null;
+const V={who:null,talk:false,arrest:0,fx:[]};
+const F={on:false,from:null,to:null,t:0,dur:2.4,cb:null};
+let T=0;
+const mc=$('#map'),mx=mc.getContext('2d'),cc=$('#city'),cx=cc.getContext('2d');
+function R(c,x,y,w,h,col){c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h);}
+function rnd(i){const x=Math.sin(i*127.1)*43758.5453;return x-Math.floor(x);}
+const hex=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const mix=(a,b,t)=>{const x=hex(a),y=hex(b);return'rgb('+x.map((v,i)=>Math.round(v+(y[i]-v)*t)).join(',')+')';};
+const SKY=[[0,'#050a1f','#101a40'],[5,'#101a40','#3a3a7a'],[6.5,'#4a5a9a','#ff9f6b'],[9,'#4a9aee','#bfe4ff'],[16,'#4a9aee','#bfe4ff'],[18,'#4a4a8a','#ff8a5c'],[20,'#14204a','#3a2f6a'],[24,'#050a1f','#101a40']];
+function sky(h){for(let i=0;i<SKY.length-1;i++){const a=SKY[i],b=SKY[i+1];if(h>=a[0]&&h<=b[0]){const t=(h-a[0])/(b[0]-a[0]);return[mix(a[1],b[1],t),mix(a[2],b[2],t)];}}return[SKY[0][1],SKY[0][2]];}
+const isNight=h=>h<6||h>19.5;
+
+/* ---------- world map ---------- */
+const LAND=[
+[[-168,66],[-162,70],[-141,70],[-125,70],[-110,73],[-95,72],[-85,70],[-80,62],[-95,60],[-93,57],[-82,55],[-79,52],[-78,58],[-70,60],[-65,60],[-62,55],[-56,52],[-60,47],[-66,45],[-70,42],[-75,38],[-76,35],[-81,31],[-80,26],[-82,26],[-85,30],[-90,29],[-94,29],[-97,27],[-97,22],[-95,18],[-91,18],[-88,21],[-87,16],[-83,15],[-83,10],[-79,9],[-77,8],[-80,7],[-84,9],[-87,13],[-92,15],[-96,16],[-105,20],[-106,23],[-110,27],[-113,31],[-117,32],[-121,35],[-124,40],[-124,47],[-125,49],[-130,54],[-135,58],[-140,60],[-147,61],[-152,59],[-158,57],[-162,55],[-165,60],[-166,63]],
+[[-55,60],[-45,60],[-40,65],[-22,70],[-20,75],[-35,75],[-60,75],[-72,75],[-58,74],[-52,68]],
+[[-77,8],[-72,12],[-63,10],[-57,6],[-51,4],[-50,0],[-45,-2],[-40,-3],[-35,-6],[-35,-9],[-39,-15],[-41,-22],[-48,-26],[-53,-34],[-58,-38],[-62,-40],[-65,-45],[-68,-50],[-69,-55],[-72,-54],[-74,-48],[-73,-40],[-71,-30],[-70,-18],[-76,-14],[-81,-5],[-80,0],[-78,3]],
+[[-6,36],[-9,37],[-9,43],[-2,43.5],[-1,46],[-4,48],[2,51],[5,53],[8,54],[8,57],[10,57],[11,54],[14,54],[20,55],[21,57],[24,57],[24,59],[29,60],[22,60],[21,63],[25,65],[22,66],[17,62],[18,59],[16,56],[12,56],[11,59],[5,58.5],[5,62],[13,67],[19,70],[26,71],[32,70],[40,67],[44,68],[60,69],[70,73],[80,73],[100,75],[112,74],[130,72],[142,72],[160,70],[170,70],[180,68],[180,65],[170,60],[163,57],[160,54],[156,51],[152,59],[142,59],[138,54],[141,48],[135,43],[130,42],[129,36],[126,35],[126,38],[122,40],[118,39],[121,37],[119,34],[122,30],[120,26],[116,23],[110,21],[108,17],[109,12],[106,9],[103,10],[100,13],[100,8],[103,2],[100,4],[98,9],[98,16],[94,17],[92,21],[88,22],[85,20],[80,15],[78,8],[76,10],[73,17],[72,21],[68,23],[66,25],[58,25],[56,27],[51,28],[48,30],[50,26],[52,24],[56,25],[59,22],[55,17],[44,12],[43,16],[39,21],[35,28],[34,31],[35,36],[30,36.5],[27,37],[26,40],[24,38],[22,37],[19,41],[15,45],[12.5,45],[14,42],[17,40],[18,40.5],[16,38],[15,40],[12,42],[10,44],[7,43.5],[3,43],[0,40],[-1,37]],
+[[-17,21],[-16,28],[-9,32],[-6,36],[0,36],[10,37],[11,33],[20,31],[25,32],[32,31],[34,28],[38,20],[43,12],[51,12],[49,6],[40,-3],[40,-11],[35,-20],[32,-26],[27,-34],[20,-35],[18,-31],[12,-17],[13,-8],[9,-1],[9,4],[4,6],[-4,5],[-8,4],[-13,8],[-17,13]],
+[[114,-22],[122,-18],[130,-12],[136,-12],[137,-16],[142,-11],[146,-19],[153,-26],[151,-34],[146,-39],[140,-38],[135,-34],[130,-32],[124,-34],[115,-34],[113,-26]],
+[[-5,50],[1,51],[2,53],[-2,56],[-3,58.5],[-6,58],[-5,55],[-3,54],[-5,52]],[[-10,52],[-6,52],[-6,55],[-10,54]],
+[[130,31],[132,34],[136,34],[140,36],[142,40],[141,43],[145,44],[141,45.5],[139,40],[136,37],[132,35.5]],
+[[95,5],[99,4],[104,-1],[106,-6],[102,-4],[97,1]],[[109,1],[115,5],[119,5],[118,0],[116,-4],[110,-3]],[[105,-6],[114,-8],[110,-8]],[[131,-1],[141,-3],[150,-10],[141,-9],[135,-4]],
+[[172,-34],[178,-38],[175,-41],[172,-41]],[[172,-41],[174,-42],[171,-46],[167,-46]],[[44,-25],[47,-25],[50,-15],[49,-12],[44,-17]],[[-24,65],[-14,65],[-14,66.5],[-22,66.5]]];
+const MX=c=>c.lo+180,MY=c=>75-c.la;
+function drawMap(){const g=mx;R(g,0,0,360,135,'#123556');
+ g.strokeStyle='#1d4a74';g.lineWidth=1;for(let x=0;x<=360;x+=30){g.beginPath();g.moveTo(x+.5,0);g.lineTo(x+.5,135);g.stroke();}for(let y=0;y<=135;y+=30){g.beginPath();g.moveTo(0,y+.5);g.lineTo(360,y+.5);g.stroke();}
+ LAND.forEach(p=>{g.beginPath();p.forEach((q,i)=>{const x=q[0]+180,y=75-q[1];i?g.lineTo(x,y):g.moveTo(x,y);});g.closePath();g.fillStyle='#3f7a52';g.fill();g.strokeStyle='#7fc08a';g.lineWidth=1;g.stroke();});
+ C.forEach(c=>R(g,MX(c)-1,MY(c)-1,2,2,'#e8f4ff'));
+ if(G){ // trail
+  g.setLineDash([3,3]);g.strokeStyle='#f2c14e';g.lineWidth=1;g.beginPath();G.trail.forEach((id,i)=>{const c=BY[id];i?g.lineTo(MX(c),MY(c)):g.moveTo(MX(c),MY(c));});g.stroke();g.setLineDash([]);
+  const pulse=S.anim?(Math.sin(T*5)+1)/2:.5;
+  (G.opts||[]).forEach(id=>{const c=BY[id];g.strokeStyle=G.gone.has(id)?'#ff8d7a':'#5ee0d0';g.lineWidth=1;g.beginPath();g.arc(MX(c)+.5,MY(c)+.5,3+pulse*3,0,7);g.stroke();});
+  if(G.over&&G.over.show){const c=BY[G.over.id];g.strokeStyle='#7bf0a8';g.beginPath();g.arc(MX(c)+.5,MY(c)+.5,5,0,7);g.stroke();}
+  const cur=BY[G.at];if(!F.on){R(g,MX(cur)-2,MY(cur)-2,5,5,'#f2c14e');R(g,MX(cur)-1,MY(cur)-1,3,3,'#fff');}
+ }
+ if(F.on){const a=BY[F.from],b=BY[F.to],p=Math.min(1,F.t/F.dur),e=p*p*(3-2*p),x0=MX(a),y0=MY(a),x1=MX(b),y1=MY(b),dd=Math.hypot(x1-x0,y1-y0),cxp=(x0+x1)/2,cyp=(y0+y1)/2-dd*.25;
+  const B=t=>[(1-t)*(1-t)*x0+2*(1-t)*t*cxp+t*t*x1,(1-t)*(1-t)*y0+2*(1-t)*t*cyp+t*t*y1],pos=B(e),nx=B(Math.min(1,e+.02)),ang=Math.atan2(nx[1]-pos[1],nx[0]-pos[0]);
+  g.strokeStyle='#fff';g.setLineDash([2,3]);g.lineWidth=1;g.beginPath();for(let t=0;t<=e;t+=.04){const q=B(t);t?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]);}g.stroke();g.setLineDash([]);
+  g.save();g.translate(pos[0],pos[1]);g.rotate(ang);R(g,-4,-1,8,2,'#fff');R(g,-1,-4,2,8,'#fff');R(g,-4,-2,2,1,'#f2c14e');g.restore();}
+ V.fx=V.fx.filter(p=>p.l>0);V.fx.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.03;p.l-=.012;R(g,p.x,p.y,2,2,p.c);});}
+
+/* ---------- people ---------- */
+const HATC={top:'#6b3fa0',beret:'#2f7a4a',bowler:'#666',cap:'#e0b020'},COATC={teal:'#1f9a9a',orange:'#e07a20',navy:'#1f3f7a',maroon:'#8a2a3a'};
+function person(c,ox,oy,a,s){const r=(x,y,w,h,col)=>c.fillRect(ox+x*s,oy+y*s,w*s,h*s)||0,f=col=>{c.fillStyle=col;};
+ f(COATC[a.coat]);r(5,16,14,12);r(3,17,2,9);r(19,17,2,9);f('#fff');r(10,16,4,2);f('#222');r(7,28,4,2);r(13,28,4,2);
+ f('#f0c8a0');r(8,8,8,8);f('#000');r(10,11,1,1);r(13,11,1,1);f('#a04040');r(11,14,2,1);
+ f(HATC[a.hat]);if(a.hat==='top'){r(7,2,10,7);r(5,8,14,2);}else if(a.hat==='beret'){r(6,5,12,4);r(10,3,4,2);}else if(a.hat==='bowler'){r(8,3,8,5);r(6,8,12,1);}else{r(7,5,10,4);r(14,8,6,1);}
+ f(a.eye==='shades'?'#111':'#f2c14e');if(a.eye==='monocle'){r(12,10,3,1);r(12,12,3,1);r(12,10,1,3);r(14,10,1,3);}else if(a.eye==='round'){r(9,10,3,1);r(9,12,3,1);r(9,10,1,3);r(11,10,1,3);r(12,10,3,1);r(12,12,3,1);r(12,10,1,3);r(14,10,1,3);}else if(a.eye==='shades'){r(9,10,6,2);}
+ if(a.acc==='case'){f('#6b3a1a');r(19,24,6,5);f('#222');r(21,23,2,1);}else if(a.acc==='umbrella'){f('#555');r(21,14,1,15);f('#c0392b');r(17,12,9,3);}else if(a.acc==='cane'){f('#ccc');r(22,18,1,12);r(21,17,3,1);}else{f('#e8d9a0');r(19,20,4,8);f('#8a6a3a');r(19,20,4,1);}}
+
+/* ---------- agent avatars ---------- */
+const SKIN={light:'#f6d2b0',tan:'#e0ac7a',medium:'#c68c5a',brown:'#8d5a3a',deep:'#5a3a26'},HAIRC={black:'#1c1c24',brown:'#5a3a22',blonde:'#e0c070',red:'#b5502a',gray:'#b8bcc4'},OUT={navy:'#1f3f7a',green:'#2f7a4a',orange:'#e07a20',purple:'#6b3fa0'};
+const AVOPT={skin:['light','tan','medium','brown','deep'],hair:['short','long','curly','bun','bald'],hairC:['black','brown','blonde','red','gray'],outfit:['navy','green','orange','purple'],gear:['headset','glasses','satchel','none']};
+const AVNAME={skin:{light:'Light',tan:'Tan',medium:'Medium',brown:'Brown',deep:'Deep'},hair:{short:'Short',long:'Long',curly:'Curly',bun:'Bun',bald:'Bald'},hairC:{black:'Black',brown:'Brown',blonde:'Blonde',red:'Red',gray:'Gray'},outfit:{navy:'Navy blazer',green:'Green vest',orange:'Orange jacket',purple:'Purple coat'},gear:{headset:'Headset',glasses:'Glasses',satchel:'Satchel',none:'No gear'}};
+const CODENAMES=['Agent Compass','Agent Ledger','Agent Meridian','Agent Harbor','Agent Atlas','Agent Quill'];
+const randAv=()=>({skin:pick(AVOPT.skin),hair:pick(AVOPT.hair),hairC:pick(AVOPT.hairC),outfit:pick(AVOPT.outfit),gear:pick(AVOPT.gear)});
+S.av=randAv();S.code=CODENAMES[0];
+function avatar(c,ox,oy,a,s){const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(ox+x*s,oy+y*s,w*s,h*s);},o=OUT[a.outfit],k=SKIN[a.skin],hc=HAIRC[a.hairC];
+ r(5,16,14,12,o);r(3,17,2,9,o);r(19,17,2,9,o);r(3,26,2,2,k);r(19,26,2,2,k);r(10,16,4,2,'#fff');r(7,28,4,2,'#222');r(13,28,4,2,'#222');r(9,20,3,3,'#f2c14e');
+ r(8,8,8,8,k);r(10,11,1,1,'#000');r(13,11,1,1,'#000');r(11,14,2,1,'#a04040');
+ if(a.hair==='short'){r(8,6,8,3,hc);r(7,8,1,3,hc);r(16,8,1,3,hc);}else if(a.hair==='long'){r(7,6,10,3,hc);r(7,9,2,9,hc);r(15,9,2,9,hc);}else if(a.hair==='curly'){r(7,5,10,4,hc);r(6,7,2,4,hc);r(16,7,2,4,hc);r(9,4,6,1,hc);}else if(a.hair==='bun'){r(8,6,8,3,hc);r(11,3,4,3,hc);r(7,8,1,3,hc);r(16,8,1,3,hc);}
+ if(a.gear==='headset'){r(7,9,1,4,'#222');r(7,8,10,1,'#222');r(15,13,3,1,'#222');}else if(a.gear==='glasses'){r(9,10,3,1,'#222');r(9,12,3,1,'#222');r(9,10,1,3,'#222');r(11,10,1,3,'#222');r(12,10,3,1,'#222');r(12,12,3,1,'#222');r(12,10,1,3,'#222');r(14,10,1,3,'#222');}else if(a.gear==='satchel'){r(18,22,7,6,'#8a5a2b');r(18,22,7,1,'#b07a40');r(8,17,1,5,'#8a5a2b');}}
+function avPort(cv,a,bg){const g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.fillStyle=bg||'#0d1d33';g.fillRect(0,0,cv.width,cv.height);avatar(g,0,0,a,cv.width/28);}
+const AVDESC=a=>[AVNAME.skin[a.skin]+' skin',AVNAME.hair[a.hair]+' '+AVNAME.hairC[a.hairC].toLowerCase()+' hair',AVNAME.outfit[a.outfit],AVNAME.gear[a.gear]].join(', ');
+function witness(c,x,y,i,talk,av){avatar(c,x-8,y-30,av||{skin:'tan',hair:'short',hairC:'brown',outfit:'navy',gear:'none'},1);if(talk&&S.anim&&Math.floor(T*2)%2===0){R(c,x+11,y-38,12,8,'#fff');R(c,x+13,y-35,2,2,'#222');R(c,x+17,y-35,2,2,'#222');R(c,x+21,y-35,2,2,'#222');}}
+
+/* ---------- city scene ---------- */
+function landmark(c,shape,x,y,col){const r=(a,b,w,h)=>R(c,x+a,y-b-h,w,h,col);
+ if(shape==='tower'){for(let i=0;i<60;i++){const w=3+(60-i)*.22;R(c,x-w/2,y-i-1,w,1,col);}R(c,x-1,y-72,2,12,col);R(c,x-8,y-26,16,2,col);}
+ else if(shape==='spire'){for(let i=0;i<72;i++){const w=Math.max(2,11-i*.13);R(c,x-w/2,y-i-1,w,1,col);}R(c,x-1,y-82,2,10,col);}
+ else if(shape==='pyramid'){for(let i=0;i<42;i++)R(c,x-(72-i*1.7)/2,y-i-1,72-i*1.7,1,col);}
+ else if(shape==='mountain'){for(let i=0;i<56;i++){const w=96-i*1.7;R(c,x-w/2,y-i-1,w,1,i>44?'#f4f8ff':col);}}
+ else if(shape==='dome'){R(c,x-24,y-20,48,20,col);for(let i=0;i<14;i++)R(c,x-(44-i*3)/2,y-20-i-1,44-i*3,1,col);R(c,x-1,y-44,2,10,col);R(c,x-30,y-8,6,8,col);R(c,x+24,y-8,6,8,col);}
+ else if(shape==='gate'){for(let i=0;i<6;i++)R(c,x-30+i*11,y-34,5,34,col);R(c,x-34,y-40,70,6,col);R(c,x-14,y-48,28,8,col);}
+ else if(shape==='sails'){R(c,x-42,y-6,84,6,col);for(let k=0;k<4;k++)for(let i=0;i<30-k*5;i++)R(c,x-36+k*18,y-6-i-1,Math.max(2,(30-k*5-i)*.7),1,col);}
+ else{R(c,x-9,y-24,18,24,col);R(c,x-4,y-46,8,22,col);R(c,x-3,y-52,6,6,col);R(c,x+4,y-52,3,12,col);R(c,x+4,y-57,4,4,'#ffd24a');}}
+function spot(c,kind,x,y,t){
+ if(kind==='hq'){R(c,x,y-48,36,48,'#3b4f73');R(c,x+9,y-54,18,6,'#f2c14e');for(let i=0;i<4;i++)for(let j=0;j<6;j++)R(c,x+4+i*8,y-44+j*7,4,4,isNight(V.h)&&rnd(i*7+j+x)>.3?'#ffe27a':'#8fb4e0');R(c,x+14,y-8,8,8,'#1d2a40');}
+ else if(kind==='port'){R(c,x-8,y-5,62,6,'#1f5f9f');for(let i=0;i<6;i++)R(c,x-6+((i*12+t*10)%58),y-3,5,1,'#9fd0ff');R(c,x+34,y-52,3,52,'#e0a020');R(c,x+10,y-54,30,3,'#e0a020');R(c,x+10,y-54,2,16,'#e0a020');R(c,x,y-12,12,12,'#c0392b');R(c,x+13,y-12,12,12,'#2f7a9a');R(c,x+6,y-24,12,12,'#e0b020');}
+ else{for(let i=0;i<7;i++)R(c,x+i*6,y-32,6,6,i%2?'#fff':'#e8453c');R(c,x+1,y-26,2,26,'#6b4a2a');R(c,x+39,y-26,2,26,'#6b4a2a');R(c,x+3,y-14,36,14,'#8a5a2b');R(c,x+6,y-19,6,5,'#ffd24a');R(c,x+16,y-19,6,5,'#7bf0a8');R(c,x+26,y-19,6,5,'#ff8d7a');}}
+const SPX={hq:20,port:118,mkt:216};
+function cityBase(c,h,seed){const [t,b]=sky(h),g=c.createLinearGradient(0,0,0,96);g.addColorStop(0,t);g.addColorStop(1,b);c.fillStyle=g;c.fillRect(0,0,320,120);
+ if(isNight(h)){for(let i=0;i<40;i++)if(i%3||Math.sin(T*3+i)>-.5)R(c,rnd(i+seed)*320,rnd(i+50)*50,1,1,'#fff');R(c,270,14,12,12,'#fff6c0');R(c,274,12,6,16,'#fff6c0');}
+ else if(h>6.5&&h<18)R(c,40+(h-6.5)*18,14+Math.abs(12-h)*3,14,14,'#fff3a0');
+ if(!isNight(h))for(let i=0;i<4;i++){const x=((i*90-T*6)%380+380)%380-40;R(c,x,16+i*8,28,6,'#ffffffcc');R(c,x+6,12+i*8,16,6,'#ffffffcc');}
+ return isNight(h);}
+function drawCity(){const c=cx;
+ if(F.on){const p=Math.min(1,F.t/F.dur),h=((G.clock+BY[F.from].tz+(p*flightHrs(BY[F.from],BY[F.to])))%24+24)%24;cityBase(c,h,3);
+  for(let i=0;i<7;i++){const x=((i*70-T*140)%480+480)%480-80;R(c,x,30+(i%3)*22,50,8,'#ffffffcc');R(c,x+10,24+(i%3)*22,30,8,'#ffffffcc');}
+  R(c,60,60,200,10,'#e8eef8');R(c,60,56,60,4,'#e8eef8');R(c,230,50,24,10,'#e8eef8');R(c,100,70,70,4,'#c0c8d8');R(c,100,48,70,4,'#c0c8d8');R(c,70,62,6,3,'#f2c14e');R(c,180,60,50,2,'#3a6ea5');
+  R(c,0,104,320,16,'#0b1a2f');return;}
+ if(!G){const h=20;cityBase(c,h,9);for(let i=0;i<26;i++){const w=8+rnd(i)*10,hh=22+rnd(i+5)*48,x=i*12.4;R(c,x,96-hh,w,hh,'#1b2a48');for(let j=0;j<hh-8;j+=7)if(rnd(i*9+j)>.4)R(c,x+2,96-hh+j+3,2,3,'#ffe27a');}R(c,0,96,320,24,'#13233c');return;}
+ const cn=BY[G.at],h=V.h=((G.clock+cn.tz)%24+24)%24,seed=cn.id.charCodeAt(0)+cn.id.charCodeAt(1),night=cityBase(c,h,seed);
+ for(let i=0;i<26;i++){const w=8+rnd(i+seed)*10,hh=18+rnd(i+seed+5)*42,x=i*12.4;R(c,x,96-hh,w,hh,night?'#1b2a48':'#4d6a94');for(let j=0;j<hh-8;j+=7)if(rnd(i*9+j+seed)>.4)R(c,x+2,96-hh+j+3,2,3,night?'#ffe27a':'#a9c8f0');}
+ landmark(c,cn.shape,166,96,night?'#5a76a8':'#8fa6c8');
+ R(c,0,96,320,24,night?'#16253c':'#3a4f6e');R(c,0,96,320,2,night?'#2a3d5c':'#6a84aa');for(let i=0;i<8;i++)R(c,((i*50-T*0)%340),108,22,2,night?'#2a3d5c':'#6a84aa');
+ const onTrack=G.at===G.chain[G.i];avatar(c,V.arrest?120:2,104-30,S.av,1);
+ if(onTrack){['hq','port','mkt'].forEach((k,i)=>{const x=SPX[k];spot(c,k,x,96,T);const seen=G.seen&&G.seen[k];witness(c,x+(k==='hq'?44:k==='port'?62:50),104,i,V.who===k&&V.talk,G.wav&&G.wav[i]);if(G.final&&G.over&&G.over.show===false&&V.arrest===0&&k==='mkt'&&false){}});
+  if(G.final&&G.sus)person(c,282,104-30,G.sus[G.truth],1);
+ }
+ if(V.arrest===1&&G.sus){person(c,150,96-30+6,G.sus[G.truth],1);R(c,150+2,96-40,4,4,'#fff');}
+}
+function drawTitleCity(){}
+/* ---------- portraits ---------- */
+function portrait(cv,a){const g=cv.getContext('2d');g.imageSmoothingEnabled=false;g.fillStyle='#0d1d33';g.fillRect(0,0,112,120);person(g,0,0,a,4);}
+
+/* ---------- main loop ---------- */
+let last=0;
+function frame(ts){const dt=Math.min(.05,((ts-last)/1000)||0);last=ts;
+ if(S.anim)T+=dt;
+ if(F.on){F.t+=S.anim?dt:F.dur;if(F.t>=F.dur){F.on=false;const cb=F.cb;F.cb=null;cb&&cb();}}
+ drawMap();drawCity();requestAnimationFrame(frame);}
+function fly(from,to,cb){F.from=from;F.to=to;F.t=0;F.cb=cb;F.dur=S.anim?2.4:0;F.on=true;sfx.fly();}
+function burst(x,y){const c=['#f2c14e','#ff8d7a','#7bf0a8','#8ccfff','#fff'][Math.floor(Math.random()*5)];for(let i=0;i<24;i++){const a=i/24*6.28,s=.4+Math.random()*1;V.fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:1,c});}}
+
+/* ---------- UI helpers ---------- */
+const P=$('#panel');
+function el(tag,at,...kids){const e=document.createElement(tag);for(const k in at||{}){if(k==='class')e.className=at[k];else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),at[k]);else e.setAttribute(k,at[k]);}kids.flat().forEach(c=>{if(c==null||c===''||c===false)return;e.append(c.nodeType?c:document.createTextNode(c));});return e;}
+function btn(label,fn,cls,extra){return el('button',Object.assign({class:'btn '+(cls||''),type:'button',onclick:()=>{sfx.click();fn();}},extra||{}),label);}
+function show(...nodes){P.replaceChildren(...nodes);const h=P.querySelector('h2');if(h){h.tabIndex=-1;h.focus({preventScroll:true});}}
+function announce(t){const s=$('#sr');s.textContent='';setTimeout(()=>{s.textContent=t;},60);}
+const tstr=h=>{h=((h%24)+24)%24;const hh=Math.floor(h),ap=hh<12?'a.m.':'p.m.';return((hh%12)||12)+':00 '+ap;};
+const localT=id=>tstr(G?G.clock+BY[id].tz:0);
+function meUpdate(){const m=$('#me');m.hidden=false;avPort(m,S.av);m.setAttribute('aria-label','Your agent avatar: '+AVDESC(S.av));$('#meName').textContent=S.code;}
+function hud(flash){if(S.set)meUpdate();const hr=$('#sHours');if(!G){hr.querySelector('span').textContent='--';$('#sFunds span').textContent='--';$('#sLoc span').textContent='Bureau HQ';$('#sStop span').textContent='--';return;}
+ hr.querySelector('span').textContent=G.hours+' of '+G.maxH;hr.querySelector('.bar i').style.width=clamp(G.hours/G.maxH*100,0,100)+'%';hr.querySelector('.bar').classList.toggle('low',G.hours/G.maxH<.25);
+ $('#sFunds span').textContent=fmt(G.funds);const c=BY[G.at];$('#sLoc span').textContent=c.city+', '+c.n+' ('+localT(G.at)+')';$('#sStop span').textContent='Stop '+(G.i+1)+' of '+(G.n+1);
+ if(flash)['#sHours','#sFunds'].forEach(id=>{const e=$(id);e.classList.remove('pop');void e.offsetWidth;e.classList.add('pop');});
+ const pp=$('#passport');pp.replaceChildren(el('small',{},'Passport: '),...(G.stamps.length?G.stamps.map(s=>el('span',{class:'stamp'+(s.ok?'':' x')},BY[s.id].n+(s.ok?'':' (dead end)'))):[el('small',{},'no stamps yet')]));}
+function notebook(){const nb=$('#notebook');if(!G){nb.replaceChildren(el('h3',{},'CASE NOTEBOOK'),el('div',{class:'na'},'Your notebook fills in as you interview witnesses.'));return;}
+ const h=G.hops[G.i];const clues=G.final?[el('li',{class:'na'},'The suspect is hiding in this city. Interview witnesses to learn their appearance, then issue a warrant.')]:['hq','port','mkt'].map(k=>el('li',{},el('b',{},LOCS[k].name+': '),G.seen[k]?'a witness saw the thief who '+h.clues[k].text+'.':el('span',{class:'na'},'not interviewed yet')));
+ const tr=G.traits.length?G.traits.map(k=>el('li',{},el('b',{},TLABEL[k]+': '),ATTR[k][G.sus[G.truth][k]])):[el('li',{class:'na'},'No description yet')];
+ nb.replaceChildren(el('div',{class:'cols'},el('div',{},el('h3',{},G.final?'LAST KNOWN LOCATION':'CLUES TO THE NEXT DESTINATION'),el('ul',{},clues)),el('div',{},el('h3',{},'SUSPECT DESCRIPTION'),el('ul',{},tr))));}
+function talk(npc,lines,done){let i=0;
+ const run=()=>{const L=lines[i],text=typeof L==='string'?L:L.t;let typing=null,cur=text;const p=el('p',{class:'say'}),ctl=el('div',{class:'row'});
+  const put=t=>{if(typing)clearInterval(typing);cur=t;speak(t,npc.pitch);V.talk=true;if(!S.anim){p.textContent=t;typing=null;V.talk=false;return;}p.textContent='';let k=0;typing=setInterval(()=>{k+=2;p.textContent=t.slice(0,k);if(k>=t.length){clearInterval(typing);typing=null;V.talk=false;}},18);};
+  const next=btn(i<lines.length-1?'Next':'Continue',()=>{if(typing){clearInterval(typing);typing=null;p.textContent=cur;V.talk=false;return;}V.talk=false;i++;i<lines.length?run():(V.who=null,done());},'primary');
+  const pc=el('canvas',{class:'port',width:112,height:119,role:'img','aria-label':npc.name+' portrait'});if(npc.av)avPort(pc,npc.av);show(el('div',{class:'dlgrow'},npc.av?pc:'',el('div',{style:'flex:1'},el('h2',{},npc.name,el('span',{class:'role'},npc.role)),p)),ctl);put(text);announce(npc.name+' says: '+text);
+  if(L.ask){const asks=el('div',{class:'asks'},el('span',{class:'lbl'},'Ask a question:'));L.ask.forEach(o=>{const b=btn(o.q,()=>{b.remove();put(o.a);announce(o.a);next.focus();},'alt');asks.append(b);});ctl.append(asks);}
+  if(S.voice&&'speechSynthesis' in window)ctl.append(btn('Hear again',()=>speak(cur,npc.pitch),'ghost'));ctl.append(next);};
+ run();}
+function fb(ok,msg,label,fn,extra){ok?sfx.good():sfx.bad();show(el('h2',{class:ok?'ok':'no'},ok?'Correct':'Not quite'),el('p',{class:'say'},msg),extra||'',el('div',{class:'row'},btn(label,fn,'primary')));speak(msg,1);announce((ok?'Correct. ':'Not quite. ')+msg);}
+function quiz(done){G.qused=G.qused||[];let pool=QUIZ.map((_,i)=>i).filter(i=>!G.qused.includes(i));if(!pool.length){G.qused=[];pool=QUIZ.map((_,i)=>i);}const qi=pick(pool),Q=QUIZ[qi];G.qused.push(qi);
+ const ask=()=>{const order=shuffle(Q.opts.map((_,i)=>i)),list=el('div',{class:'opts'});order.forEach((oi,k)=>list.append(btn(String.fromCharCode(65+k)+'. '+Q.opts[oi],()=>{if(oi===Q.ci){G.quizOK++;fb(true,Q.ex+' The officer waves you through.','Question the witness',done);}else{G.quizBad++;adv(2);fb(false,'The officer shakes their head. That costs you 2 hours. '+Q.ex,'Try the question again',ask);}},'opt')));
+  show(el('h2',{},'Customs checkpoint'),el('p',{class:'say'},'The customs officer will talk only if you pass a quick inspection: '+Q.q),list);speak('Customs checkpoint. '+Q.q,1);};ask();}
+function adv(h){G.hours-=h;G.clock+=h;hud(true);}
+const ENDCHECK=()=>G&&G.hours<=0;
+
+/* ---------- case generation ---------- */
+const CHIEF={name:'Chief Inspector Reyes',role:'Global Trade Bureau',pitch:.9,av:{skin:'medium',hair:'short',hairC:'gray',outfit:'navy',gear:'glasses'}};
+const ITEMS=['the Golden Ledger','the Master Tariff Table','the Platinum Trade Seal'];
+function newCase(diff){const n={rookie:3,agent:4,chief:5}[diff];let chain;
+ for(let t=0;t<200;t++){chain=[pick(C).id];while(chain.length<n+1){const last=BY[chain[chain.length-1]],cand=shuffle(C.filter(c=>!chain.includes(c.id))).find(c=>dist(last,c)>2500);if(!cand)break;chain.push(cand.id);}if(chain.length===n+1)break;}
+ const hops=[];for(let i=0;i<n;i++){const tg=BY[chain[i+1]],clues=makeClues(tg,diff);const pool=shuffle(C.filter(c=>!chain.includes(c.id)));
+  const sim=diff==='rookie'?[]:pool.filter(c=>c.cur===tg.cur||c.ex.some(e=>tg.ex.includes(e)));const dec=[];sim.slice(0,2).forEach(c=>dec.push(c));pool.forEach(c=>{if(dec.length<3&&!dec.includes(c))dec.push(c);});
+  hops.push({clues,opts:shuffle([tg.id,...dec.map(c=>c.id)])});}
+ let sH=3*(n+1),sF=0;for(let i=0;i<n;i++){sH+=flightHrs(BY[chain[i]],BY[chain[i+1]]);sF+=flightCost(BY[chain[i]],BY[chain[i+1]]);}
+ const mult={rookie:2.3,agent:1.9,chief:1.55}[diff],sus=makeSuspects();
+ G={diff,n,chain,hops,i:0,at:chain[0],trail:[chain[0]],maxH:Math.ceil(sH*mult/5)*5,maxF:Math.ceil(sF*mult*1.1/500)*500,seen:{},traits:[],sus,truth:Math.floor(Math.random()*5),stamps:[{id:chain[0],ok:true}],quizOK:0,quizBad:0,wrongFlights:0,gone:new Set(),final:false,clock:pick([7,9,11,13]),item:pick(ITEMS),over:null,qused:[]};
+ G.wav=[0,1,2].map(()=>Object.assign(randAv(),{gear:pick(['none','none','glasses','headset'])}));G.hours=G.maxH;G.funds=G.maxF;G.opts=hops[0].opts;V.arrest=0;V.who=null;}
+
+/* ---------- screens ---------- */
+function title(){G=null;if(S.set)meUpdate();V.arrest=0;hud();notebook();$('#map').setAttribute('aria-label','World map');$('#city').setAttribute('aria-label','City scene at night');
+ talk(CHIEF,['Welcome, agent. A rogue trader is loose in the global economy, and the Global Trade Bureau needs someone who knows how business really works across borders.',
+ {t:'Here is how a case works. Interview witnesses in each city, work out which country their clues point to, and fly there before the trail goes cold.',ask:[{q:'How do I read the clues?',a:'Every clue is a business fact: a company headquarters, a famous export, a currency, or a landmark. Match it to a country using the Trade Atlas.'},{q:'What happens if I fly to the wrong place?',a:'You lose hours and funds, and you land in a dead end. Research first, then fly.'},{q:'What are the customs checkpoints?',a:'Harbor officers quiz visitors on international business. Pass, and they will talk. Fail, and it costs you time.'}]},
+ 'First, let us create your agent profile.'],creator);}
+
+function creator(){const a=Object.assign({},S.av);let code=S.code;const cv=el('canvas',{width:112,height:120,role:'img'});
+ const upd=()=>{avPort(cv,a);cv.setAttribute('aria-label','Avatar preview: '+AVDESC(a)+'. Codename: '+code);};
+ const groups=[['skin','Skin tone'],['hair','Hair style'],['hairC','Hair color'],['outfit','Outfit'],['gear','Gear']];const bsets={};
+ const gEls=groups.map(([k,lab])=>{const bs=AVOPT[k].map(v=>btn(AVNAME[k][v],()=>{a[k]=v;refresh();},'sm',{'aria-pressed':'false'}));bs.forEach((b,i)=>b._v=AVOPT[k][i]);bsets[k]=bs;return el('div',{class:'grp'},el('b',{},lab),el('div',{class:'row l'},bs));});
+ const cb=CODENAMES.map(n=>btn(n,()=>{code=n;refresh();},'sm',{'aria-pressed':'false'}));gEls.push(el('div',{class:'grp'},el('b',{},'Codename'),el('div',{class:'row l'},cb)));
+ function refresh(){groups.forEach(([k])=>bsets[k].forEach(b=>b.setAttribute('aria-pressed',b._v===a[k])));cb.forEach(b=>b.setAttribute('aria-pressed',b.textContent===code));upd();}
+ show(el('h2',{},'Create your agent'),el('div',{class:'creator'},el('div',{},cv,el('div',{class:'row l'},btn('Surprise me',()=>{Object.assign(a,randAv());code=pick(CODENAMES);refresh();},'sm alt'))),el('div',{},gEls)),el('div',{class:'row'},btn('Confirm my agent',()=>{S.av=a;S.code=code;S.set=true;meUpdate();announce('Agent created: '+code);chooseRank();},'primary')));refresh();speak('Create your agent. Choose your look and a codename.',1);}
+function chooseRank(){show(el('h2',{},'Choose your rank'),el('div',{class:'opts'},[['rookie','Rookie Agent','3 flights. Clues name companies, exports, and landmarks directly.'],['agent','Field Agent','4 flights. Clues mix companies, facts, currencies, and landmarks. Decoys look similar.'],['chief','Senior Agent','5 flights. Clues are indirect: facts, exports, and currencies only.']].map(r=>btn(r[1]+': '+r[2],()=>begin(r[0]),'opt alt'))));speak('Choose your rank.',1);}
+function begin(d){newCase(d);hud();notebook();const c=BY[G.at];
+ talk(CHIEF,[S.code+', the thief stole '+G.item+' from the Bureau vault in '+c.city+', '+c.n+'. It holds the records that keep international contracts honest.',
+ 'We do not know who we are chasing, but five suspects match the profile. Every witness may reveal a detail about their appearance. Track the thief, then issue a warrant for the right person.',
+ 'Check the Trade Atlas before every flight. Good luck, agent.'],hub);}
+function hub(){if(ENDCHECK())return over('time');hud();notebook();const c=BY[G.at],on=G.at===G.chain[G.i];
+ $('#city').setAttribute('aria-label','Pixel art of '+c.city+' at '+localT(G.at)+(on?' with a business district, a harbor, and a market.':''));$('#map').setAttribute('aria-label','World map. You are in '+c.city+', '+c.n+'.');
+ if(!on){const why=whyNot(c);show(el('h2',{class:'no'},'Dead end in '+c.city),el('p',{class:'say'},'Nobody here has seen the thief. '+why),el('div',{class:'card'},el('b',{},'About '+c.n+': '),c.n+' '+c.fact+'. Companies include '+c.co.join(', ')+'.'),el('div',{class:'row'},btn('Open Trade Atlas',()=>atlas(hub),'alt'),btn('Choose a new destination',flightMenu,'primary')));return;}
+ const btns=G.final?['hq','port','mkt'].map(k=>locBtn(k)):['hq','port','mkt'].map(k=>locBtn(k));
+ show(el('h2',{},'You are in '+c.city+', '+c.n),el('p',{class:'say'},G.final?'The trail ends here. Interview the witnesses to learn what the suspect looks like, then issue a warrant.':'Local time: '+localT(G.at)+'. Interview witnesses to find out where the thief went next. Each visit costs 1 hour.'),
+ el('div',{class:'opts'},btns),el('div',{class:'row'},btn('Open Trade Atlas',()=>atlas(hub),'alt'),btn('Suspect board',()=>board(false),'alt'),G.final?btn('Issue warrant',()=>board(true),'primary'):btn('Fly to the next destination',flightMenu,'primary')));}
+function locBtn(k){const done=G.seen[k];return btn((done?'Revisit (free): ':'Visit: ')+LOCS[k].name+' ('+LOCS[k].who+')',()=>visit(k),'opt'+(done?' alt':''));}
+function visit(k){const first=!G.seen[k];if(first&&G.hours<=0)return over('time');V.who=k;
+ const go=()=>{if(first){adv(1);G.seen[k]=true;}const h=G.hops[G.i];let lines;const npc={name:LOCS[k].who,role:LOCS[k].name,pitch:k==='hq'?1.15:k==='port'?.85:1.05,av:G.wav[['hq','port','mkt'].indexOf(k)]};
+  const nextT=TRAITORDER.find(t=>!G.traits.includes(t));const giveT=nextT&&(G.final||k==='mkt')&&first;
+  if(G.final){lines=['I saw them '+LOCS[k].sp+'. The thief is hiding somewhere in this city.'];}else{lines=['Yes, I saw someone suspicious '+LOCS[k].sp+'. They '+h.clues[k].text+'. Then they hurried toward the airport.'];}
+  if(giveT){G.traits.push(nextT);lines.push('And I noticed the person '+traitLine(nextT,G.sus[G.truth][nextT])+'.');}
+  hud(true);notebook();talk(npc,lines,hub);};
+ if(k==='port'&&first&&!G.final)quiz(go);else go();}
+function whyNot(c){if(G.i>=G.n)return'';const h=G.hops[G.i];for(const k of ['hq','port','mkt']){if(!G.seen[k])continue;const cl=h.clues[k];if(!TYPES[cl.type].test(c,cl.val)){const real=C.find(x=>TYPES[cl.type].test(x,cl.val));return'The clue "'+cl.text+'" does not fit '+c.n+'. '+(real?TYPES[cl.type].learn(real,cl.val)+'.':'');}}return'You flew without enough clues. Interview more witnesses before the next flight.';}
+function atlas(back){const list=el('div',{class:'grid2'},C.slice().sort((a,b)=>a.n.localeCompare(b.n)).map(c=>btn(c.n,()=>profile(c,back),'sm alt')));
+ show(el('h2',{},'Trade Atlas'),el('p',{class:'say'},'Choose a country to read its business profile.'),list,el('div',{class:'row'},btn('Close atlas',back,'primary')));}
+function profile(c,back){show(el('h2',{},c.n,el('span',{class:'role'},c.city)),el('div',{class:'card'},el('div',{},el('b',{},'Currency: '),c.cur),el('div',{},el('b',{},'Major companies: '),c.co.join(', ')),el('div',{},el('b',{},'Known for exporting: '),c.ex.join(', ')),el('div',{},el('b',{},'Landmark: '),c.lm),el('div',{},el('b',{},'Trade fact: '),c.n+' '+c.fact+'.'),el('div',{},el('b',{},'Time zone: '),tzTxt(c.tz)+(G?' (local time now '+localT(c.id)+')':''))),el('div',{class:'row'},btn('Back to the atlas',()=>atlas(back),'alt'),btn('Close atlas',back,'primary')));}
+function flightMenu(){if(ENDCHECK())return over('time');const h=G.hops[G.i],from=BY[G.at],rows=[];
+ h.opts.forEach(id=>{const c=BY[id],hr=flightHrs(from,c),cost=flightCost(from,c),gone=G.gone.has(id),poor=cost>G.funds;rows.push(el('div',{class:'card'},el('b',{},c.city+', '+c.n),el('span',{class:'tag'},hr+' hours'),el('span',{class:'tag'},fmt(cost)),gone?el('span',{class:'tag'},'ruled out'):'',el('div',{class:'row l'},btn('Fly to '+c.city,()=>doFly(id),'sm primary',gone||poor?{disabled:'disabled'}:{}),btn('Atlas entry',()=>profile(c,flightMenu),'sm alt'),poor&&!gone?el('span',{class:'tipline'},'Not enough funds'):'')));});
+ if(G.at!==G.chain[G.i]){const c=BY[G.chain[G.i]];rows.push(el('div',{class:'card'},el('b',{},'Return to '+c.city+', '+c.n),el('span',{class:'tag'},flightHrs(from,c)+' hours'),el('span',{class:'tag'},fmt(flightCost(from,c))),el('div',{class:'row l'},btn('Fly back',()=>doFly(c.id),'sm',flightCost(from,c)>G.funds?{disabled:'disabled'}:{}))));}
+ const canHint=G.hours>3&&h.opts.some(id=>id!==G.chain[G.i+1]&&!G.gone.has(id));
+ show(el('h2',{},'Where did the thief go?'),el('p',{class:'say'},'Match the clues in your notebook to one of these destinations. Use the Trade Atlas if you are not sure.'),...rows,el('div',{class:'row'},btn('Ask the Chief for a hint (costs 3 hours)',hint,'alt',canHint?{}:{disabled:'disabled'}),btn('Back',hub,'ghost')));}
+function hint(){const h=G.hops[G.i],wrong=h.opts.filter(id=>id!==G.chain[G.i+1]&&!G.gone.has(id));const id=pick(wrong);G.gone.add(id);adv(3);const c=BY[id];announce('The Chief rules out '+c.n);fb(true,'The Chief checked the Bureau files and ruled out '+c.city+', '+c.n+'. '+c.n+' '+c.fact+', which does not match your clues.','Back to the flight list',flightMenu);}
+function doFly(id){const to=BY[id],from=BY[G.at],hr=flightHrs(from,to),cost=flightCost(from,to);G.funds-=cost;const fromId=G.at;show(el('h2',{},'In flight to '+to.city),el('p',{class:'say'},'Flight time: '+hr+' hours. Cost: '+fmt(cost)+'.'));announce('Flying to '+to.city);
+ const clockBefore=G.clock;fly(fromId,id,()=>{G.clock=clockBefore;adv(hr);G.at=id;G.trail.push(id);const right=G.i<G.n&&id===G.chain[G.i+1],back=id===G.chain[G.i];
+  if(right){G.i++;G.seen={};G.stamps.push({id,ok:true});G.gone=new Set();G.final=G.i===G.n;G.opts=G.final?[]:G.hops[G.i].opts;sfx.stamp();hud(true);notebook();
+   if(ENDCHECK()&&!G.final)return over('time');const c=BY[id];show(el('h2',{class:'ok'},'Welcome to '+c.city+'!'),el('div',{class:'card'},el('span',{class:'stampbig'},c.n.toUpperCase())),el('p',{class:'say'},'Correct! The thief was here. '+(G.final?'This is the end of the trail. Find out what the suspect looks like.':'Find out where they went next.')),el('div',{class:'row'},btn('Start investigating',hub,'primary')));speak('Welcome to '+c.city+'. The thief was here.',1);}
+  else if(back){hud(true);notebook();hub();}
+  else{G.wrongFlights++;G.gone.add(id);G.stamps.push({id,ok:false});sfx.bad();hud(true);notebook();if(ENDCHECK())return over('time');const c=BY[id];speak('Dead end. '+whyNot(c),1);hub();}});}
+function board(final){const t=G.traits,list=el('div',{class:'grid5'});
+ const poss=G.sus.map(s=>t.every(k=>s[k]===G.sus[G.truth][k]));
+ G.sus.forEach((s,i)=>{const cv=el('canvas',{width:112,height:120,role:'img','aria-label':s.n+': '+TRAITORDER.map(k=>ATTR[k][s[k]]).join(', ')});portrait(cv,s);
+  const ul=el('ul',{},TRAITORDER.map(k=>{const known=t.includes(k),m=s[k]===G.sus[G.truth][k];return el('li',{class:known?(m?'match':'miss'):''},(known?(m?'✓ ':'✗ '):'')+TLABEL[k]+': '+ATTR[k][s[k]]);}));
+  list.append(el('div',{class:'card sus'},cv,el('b',{},s.n),ul,final?btn('Issue warrant',()=>warrant(i),'sm primary'):''));});
+ show(el('h2',{},final?'Issue your warrant':'Suspect board'),el('p',{class:'say'},t.length?'Details you know so far are marked with a check (matches the thief) or a cross (does not match). Still possible: '+poss.filter(Boolean).length+' of 5.':'You have no description yet. Interview witnesses to narrow the list.'),list,el('div',{class:'row'},btn('Back',hub,'ghost')));}
+function warrant(i){if(i===G.truth)arrest();else over('wrong',i);}
+function arrest(){V.arrest=1;sfx.cuff();for(let k=0;k<5;k++)setTimeout(()=>burst(40+Math.random()*280,20+Math.random()*60),k*200);const s=G.sus[G.truth];
+ const ratio=G.hours/G.maxH,rank=ratio>.5?'Chief Inspector':ratio>.3?'Global Gumshoe':ratio>.15?'Customs Captain':'Trade Rookie',score=G.hours*10+Math.floor(G.funds/20)+G.quizOK*25-G.quizBad*10-G.wrongFlights*15;
+ show(el('h2',{class:'ok'},'Case closed!'),el('div',{},el('span',{class:'stampbig'},'CAUGHT')),el('p',{class:'say'},s.n+' is in handcuffs and '+G.item+' is back in the Bureau vault. Excellent work, '+S.code+'.'),
+ el('div',{class:'grid2'},el('div',{class:'card'},'Rank',el('div',{class:'big'},rank)),el('div',{class:'card'},'Score',el('div',{class:'big'},score)),el('div',{class:'card'},'Hours left',el('div',{class:'big'},G.hours+' of '+G.maxH)),el('div',{class:'card'},'Customs questions',el('div',{class:'big'},G.quizOK+' correct'))),recap(),
+ el('div',{class:'row noprint'},btn('Print case report',()=>window.print(),'alt'),btn('New case',title,'primary')));speak('Case closed! '+s.n+' is under arrest. Your rank is '+rank+'.',1);announce('Case closed. '+s.n+' arrested. Rank '+rank+'.');}
+function recap(){const rows=[];for(let i=0;i<G.n&&i<=G.i;i++){const tg=BY[G.chain[i+1]];if(i+1>G.i)break;rows.push(el('tr',{},el('td',{},tg.n),el('td',{},['hq','port','mkt'].map(k=>TYPES[G.hops[i].clues[k].type].learn(tg,G.hops[i].clues[k].val)).join('. ')+'.')));}
+ return el('div',{class:'card'},el('b',{},'What the trail taught you'),el('table',{},el('tr',{},el('th',{},'Country'),el('th',{},'Business facts')),...rows));}
+function over(why,i){V.who=null;const s=G.sus[G.truth],last=BY[G.at];sfx.bad();
+ const msg=why==='time'?'The clock ran out and the trail went cold. The thief was '+s.n+' and escaped with '+G.item+'.':'The warrant was wrong. You named '+G.sus[i].n+', but the thief was '+s.n+', who slipped away with '+G.item+'.';
+ show(el('h2',{class:'no'},why==='time'?'Time is up':'Wrong warrant'),el('p',{class:'say'},msg),el('p',{},'Every case teaches you something. Review the business facts you uncovered, then try a new case.'),recap(),el('div',{class:'row noprint'},btn('Try a new case',title,'primary')));speak(msg,1);announce(msg);}
+function wire(){const t=(id,key,fn)=>{const b=$(id);b.addEventListener('click',()=>{S[key]=!S[key];b.setAttribute('aria-pressed',S[key]);fn&&fn();});b.setAttribute('aria-pressed',S[key]);};
+ t('#bVoice','voice',()=>{if(!S.voice&&'speechSynthesis' in window)speechSynthesis.cancel();});t('#bSfx','sfx');t('#bAnim','anim',()=>document.body.classList.toggle('noanim',!S.anim));if(!S.anim)document.body.classList.add('noanim');}
+wire();title();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
